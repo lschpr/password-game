@@ -3,121 +3,339 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Puzzle Game: Beyond Impossible</title>
+    <title>Puzzle Game Launcher: Beyond Impossible</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Base64: WFhJX1NFQ1JFVF8yMDI1 -->
+    <!-- Base64: VUxUSU1BVEVfMjU= -->
 </head>
 <body class="bg-gray-900 text-gray-100 flex flex-col items-center min-h-screen p-6">
-    <h1 class="text-4xl font-extrabold text-red-500 mb-6">Password Puzzle Game: Beyond Impossible</h1>
-    <input 
-        type="text" 
-        id="passwordInput" 
-        placeholder="Enter your password (abandon hope...)" 
-        class="p-3 text-lg w-full max-w-lg border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-gray-800 text-gray-100 mb-6"
-        oninput="checkPassword()"
-    >
-    <div id="progress" class="w-full max-w-lg bg-gray-300 rounded-full h-4 mb-4">
-        <div id="progressBar" class="bg-red-500 h-4 rounded-full" style="width: 0%"></div>
+    <h1 class="text-4xl font-extrabold text-red-500 mb-6">Puzzle Game Launcher: Beyond Impossible</h1>
+    <div id="launcher" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <button onclick="loadGame('password')" class="p-4 bg-gray-800 rounded-lg shadow hover:bg-red-600">Password Puzzle</button>
+        <button onclick="loadGame('equation')" class="p-4 bg-gray-800 rounded-lg shadow hover:bg-blue-600">Infinite Equation Solver</button>
+        <button onclick="loadGame('geopolitical')" class="p-4 bg-gray-800 rounded-lg shadow hover:bg-green-600">Geopolitical Time Machine</button>
+        <button onclick="loadGame('crypto')" class="p-4 bg-gray-800 rounded-lg shadow hover:bg-purple-600">Cryptographic Cipher Hunt</button>
+        <button onclick="loadGame('cosmic')" class="p-4 bg-gray-800 rounded-lg shadow hover:bg-indigo-600">Cosmic Codebreaker</button>
     </div>
-    <ul id="rulesList" class="w-full max-w-lg space-y-2"></ul>
-    <div id="message" class="mt-4 text-lg text-gray-700"></div>
-    <div id="aiStatus" class="mt-4 text-lg text-gray-700"></div>
+    <div id="metaPuzzle" class="hidden mt-4">
+        <input type="text" id="metaInput" placeholder="Enter meta-puzzle code" class="p-3 text-lg w-full max-w-lg border-2 rounded-lg bg-gray-800 text-gray-100">
+        <div id="metaMessage" class="mt-2 text-lg text-gray-700"></div>
+    </div>
+    <div id="gameArea" class="hidden">
+        <h2 id="gameTitle" class="text-2xl font-bold text-red-500 mb-4"></h2>
+        <input type="text" id="gameInput" placeholder="Enter your input" class="p-3 text-lg w-full max-w-lg border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-gray-800 text-gray-100 mb-6" oninput="checkInput()">
+        <div id="progress" class="w-full max-w-lg bg-gray-300 rounded-full h-4 mb-4">
+            <div id="progressBar" class="bg-red-500 h-4 rounded-full" style="width: 0%"></div>
+        </div>
+        <ul id="rulesList" class="w-full max-w-lg space-y-2"></ul>
+        <div id="message" class="mt-4 text-lg text-gray-700"></div>
+        <div id="aiStatus" class="mt-4 text-lg text-gray-700"></div>
+    </div>
 
     <script>
-        const rules = [
-            { description: "Password must be at least 15 characters", validate: (pwd) => pwd.length >= 15 },
-            { description: "Sum of ASCII values must satisfy x² + y² = z²", validate: (pwd) => {
-                const sum = pwd.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
-                for (let x = 1; x < sum; x++) {
-                    for (let y = 1; y < sum; y++) {
-                        if (x * x + y * y === sum) return true;
-                    }
-                }
-                return false;
-            }},
-            { description: "Include an uninhabited territory near the Mid-Atlantic Ridge", validate: (pwd) => ["South Georgia", "Bouvet Island", "Kerguelen Islands"].some(t => pwd.includes(t)) },
-            { description: "Simplified hash must start with '00ff'", validate: (pwd) => {
-                const hash = pwd.split('').reduce((s, c, i) => s + c.charCodeAt(0) * (i + 1), 0).toString(16);
-                return hash.startsWith('00ff');
-            }},
-            { description: "Include current Unix timestamp % 97 (e.g., 92)", validate: (pwd) => {
-                const mod = Math.floor(Date.now() / 1000) % 97;
-                return pwd.includes(mod.toString());
-            }},
-            { description: "No vowels, but include a 7+ letter English word", validate: (pwd) => !/[aeiouAEIOU]/.test(pwd) && ["strength", "syllable", "mythical"].some(w => pwd.includes(w)) },
-            { description: "Length must be a Fibonacci number", validate: (pwd) => [1, 2, 3, 5, 8, 13, 21, 34, 55].includes(pwd.length) },
-            { description: "Include a deep-sea creature emoji (🦑, 🦐)", validate: (pwd) => /[\u{1F990}-\u{1F99F}]/u.test(pwd) },
-            { description: "Unique characters = nth prime (n = length)", validate: (pwd) => {
-                const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
-                return new Set(pwd).size === (primes[pwd.length - 1] || 0);
-            }},
-            { description: "Form a regex matching 'hello'", validate: (pwd) => {
-                try { return new RegExp(pwd).test("hello"); } catch { return false; }
-            }},
-            { description: "Include a Sophie Germain prime", validate: (pwd) => {
-                const primes = [2, 3, 5, 11, 23, 29, 41, 53, 83, 89];
-                return primes.some(p => pwd.includes(p.toString()));
-            }},
-            { description: "Include the name of a disputed territory pre-1945", validate: (pwd) => ["Danzig", "Sudetenland"].some(t => pwd.includes(t)) },
-            { description: "ASCII sum must be divisible by the chromatic number of a Petersen graph (3)", validate: (pwd) => {
-                const sum = pwd.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
-                return sum % 3 === 0;
-            }},
-            { description: "Include a valid ISBN-10 number", validate: (pwd) => {
-                const isbn = pwd.match(/\d{10}/);
-                if (!isbn) return false;
-                const digits = isbn[0].split('').map(Number);
-                return digits.reduce((s, d, i) => s + d * (10 - i), 0) % 11 === 0;
-            }},
-            { description: "No two consecutive characters can be identical", validate: (pwd) => !/(.)\1/.test(pwd) },
-            { description: "Include the name of a tectonic plate", validate: (pwd) => ["Pacific", "Nazca", "Eurasian"].some(p => pwd.includes(p)) },
-            { description: "Number of consonants must equal a perfect number", validate: (pwd) => {
-                const consonants = pwd.replace(/[aeiouAEIOU0-9\s]/g, '').length;
-                return [6, 28, 496, 8128].includes(consonants);
-            }},
-            { description: "Include a valid IPv4 address", validate: (pwd) => /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/.test(pwd) },
-            { description: "Password must be a palindrome", validate: (pwd) => pwd === pwd.split('').reverse().join('') },
-            { description: "Include a valid chemical element symbol", validate: (pwd) => ["H", "He", "Li", "Be", "Ne"].some(e => pwd.includes(e)) },
-            { description: "Sum of digits must form a perfect square", validate: (pwd) => {
-                const digits = pwd.match(/\d/g);
-                if (!digits) return false;
-                const sum = digits.reduce((s, d) => s + parseInt(d), 0);
-                return Number.isInteger(Math.sqrt(sum));
-            }},
-            { description: "Include a word that is an anagram of 'listen'", validate: (pwd) => ["silent", "inlets"].some(w => pwd.includes(w)) },
-            { description: "Password must encode the day of the week as a number (1=Mon, 7=Sun)", validate: (pwd) => {
-                const day = new Date().getDay() || 7;
-                return pwd.includes(day.toString());
-            }},
-            { description: "Include a valid chess move in algebraic notation", validate: (pwd) => /\b[a-h][1-8][a-h][1-8]\b/.test(pwd) },
-            { description: "Total number of characters must satisfy n² + n + 41 is prime", validate: (pwd) => {
-                const n = pwd.length;
-                const val = n * n + n + 41;
-                for (let i = 2; i <= Math.sqrt(val); i++) {
-                    if (val % i === 0) return false;
-                }
-                return val > 1;
-            }}
-        ];
+        const games = {
+            password: {
+                title: "Password Puzzle: Beyond Impossible",
+                rules: [
+                    { description: "Password ≥ 15 characters", validate: (pwd) => pwd.length >= 15 },
+                    { description: "ASCII sum satisfies x² + y² = z²", validate: (pwd) => {
+                        const sum = pwd.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+                        for (let x = 1; x < sum; x++) for (let y = 1; y < sum; y++) if (x * x + y * y === sum) return true;
+                        return false;
+                    }},
+                    { description: "Include uninhabited territory (e.g., Bouvet Island)", validate: (pwd) => ["South Georgia", "Bouvet Island", "Kerguelen Islands"].some(t => pwd.includes(t)) },
+                    { description: "Simplified hash starts with '00ff'", validate: (pwd) => {
+                        const hash = pwd.split('').reduce((s, c, i) => s + c.charCodeAt(0) * (i + 1), 0).toString(16);
+                        return hash.startsWith('00ff');
+                    }},
+                    { description: "Include Unix timestamp % 97 (e.g., 0)", validate: (pwd) => {
+                        const mod = Math.floor(Date.now() / 1000) % 97;
+                        return pwd.includes(mod.toString());
+                    }},
+                    { description: "No vowels, include 7+ letter English word", validate: (pwd) => !/[aeiouAEIOU]/.test(pwd) && ["strength", "syllable", "mythical"].some(w => pwd.includes(w)) },
+                    { description: "Length is a Fibonacci number", validate: (pwd) => [1, 2, 3, 5, 8, 13, 21, 34, 55].includes(pwd.length) },
+                    { description: "Deep-sea creature emoji (🦑)", validate: (pwd) => /[\u{1F990}-\u{1F99F}]/u.test(pwd) },
+                    { description: "Unique characters = nth prime", validate: (pwd) => {
+                        const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+                        return new Set(pwd).size === (primes[pwd.length - 1] || 0);
+                    }},
+                    { description: "Regex matches 'hello'", validate: (pwd) => { try { return new RegExp(pwd).test("hello"); } catch { return false; } }},
+                    { description: "Include Sophie Germain prime", validate: (pwd) => [2, 3, 5, 11, 23, 29, 41, 53, 83, 89].some(p => pwd.includes(p.toString())) },
+                    { description: "Include disputed territory pre-1945", validate: (pwd) => ["Danzig", "Sudetenland"].some(t => pwd.includes(t)) },
+                    { description: "ASCII sum divisible by Petersen graph chromatic number (3)", validate: (pwd) => pwd.split('').reduce((s, c) => s + c.charCodeAt(0), 0) % 3 === 0 },
+                    { description: "Include valid ISBN-10", validate: (pwd) => {
+                        const isbn = pwd.match(/\d{10}/);
+                        if (!isbn) return false;
+                        return isbn[0].split('').map(Number).reduce((s, d, i) => s + d * (10 - i), 0) % 11 === 0;
+                    }},
+                    { description: "No consecutive identical characters", validate: (pwd) => !/(.)\1/.test(pwd) },
+                    { description: "Include tectonic plate name", validate: (pwd) => ["Pacific", "Nazca", "Eurasian"].some(p => pwd.includes(p)) },
+                    { description: "Consonants = perfect number", validate: (pwd) => [6, 28, 496, 8128].includes(pwd.replace(/[aeiouAEIOU0-9\s]/g, '').length) },
+                    { description: "Include valid IPv4 address", validate: (pwd) => /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/.test(pwd) },
+                    { description: "Password is a palindrome", validate: (pwd) => pwd === pwd.split('').reverse().join('') },
+                    { description: "Include chemical element symbol", validate: (pwd) => ["H", "He", "Li", "Be", "Ne"].some(e => pwd.includes(e)) },
+                    { description: "Sum of digits is a perfect square", validate: (pwd) => {
+                        const digits = pwd.match(/\d/g);
+                        return digits ? Number.isInteger(Math.sqrt(digits.reduce((s, d) => s + parseInt(d), 0))) : false;
+                    }},
+                    { description: "Include anagram of 'listen'", validate: (pwd) => ["silent", "inlets"].some(w => pwd.includes(w)) },
+                    { description: "Include day of week (1=Mon, 7=Sun)", validate: (pwd) => pwd.includes((new Date().getDay() || 7).toString()) },
+                    { description: "Include valid chess move", validate: (pwd) => /\b[a-h][1-8][a-h][1-8]\b/.test(pwd) },
+                    { description: "Length satisfies n² + n + 41 is prime", validate: (pwd) => {
+                        const n = pwd.length;
+                        const val = n * n + n + 41;
+                        for (let i = 2; i <= Math.sqrt(val); i++) if (val % i === 0) return false;
+                        return val > 1;
+                    }}
+                ],
+                code: "XAI_SECRET_2025",
+                riddle: "Find smallest n: n ≡ 3 (mod 7), n ≡ 5 (mod 11), n ≡ 2 (mod 13). Extract nth character from source."
+            },
+            equation: {
+                title: "Infinite Equation Solver",
+                rules: [
+                    { description: "Sequence ≥ 10 numbers", validate: (pwd) => (pwd.match(/\d+/g) || []).length >= 10 },
+                    { description: "Sum is a Gaussian integer (a² + b² prime)", validate: (pwd) => {
+                        const sum = (pwd.match(/\d+/g) || []).reduce((s, n) => s + parseInt(n), 0);
+                        for (let a = 1; a < sum; a++) for (let b = 1; b < sum; b++) {
+                            const p = a * a + b * b;
+                            if (p === sum) for (let i = 2; i <= Math.sqrt(p); i++) if (p % i === 0) return false;
+                            if (p === sum) return true;
+                        }
+                        return false;
+                    }},
+                    { description: "Includes solution to x² - 3y² = 1", validate: (pwd) => pwd.includes("2") && pwd.includes("1") },
+                    { description: "Encodes a Fibonacci number", validate: (pwd) => [1, 2, 3, 5, 8, 13, 21, 34, 55].some(f => pwd.includes(f.toString())) },
+                    { description: "Sum divisible by 7th Mersenne prime (127)", validate: (pwd) => (pwd.match(/\d+/g) || []).reduce((s, n) => s + parseInt(n), 0) % 127 === 0 },
+                    { description: "No even digits, sum is even", validate: (pwd) => !/[02468]/.test(pwd) && (pwd.match(/\d+/g) || []).reduce((s, n) => s + parseInt(n), 0) % 2 === 0 },
+                    { description: "Forms continued fraction for √2", validate: (pwd) => pwd.includes("1,2,2,2") },
+                    { description: "Includes number on y² = x³ - x mod 17", validate: (pwd) => {
+                        const nums = pwd.match(/\d+/g)?.map(Number) || [];
+                        return nums.some((x, i) => { const y = nums[i + 1] || 0; return (y * y) % 17 === (x * x * x - x) % 17; });
+                    }},
+                    { description: "Digits = Lucas number", validate: (pwd) => [2, 3, 4, 7, 11, 18, 29].includes((pwd.match(/\d/g) || []).length) },
+                    { description: "Matches Taylor series term for e^x", validate: (pwd) => pwd.includes("1") || pwd.includes("2") },
+                    { description: "Includes Catalan number", validate: (pwd) => [1, 2, 5, 14, 42].some(c => pwd.includes(c.toString())) },
+                    { description: "Modular inverse exists mod 23", validate: (pwd) => {
+                        const num = parseInt(pwd.match(/\d+/)?.[0] || "0");
+                        for (let i = 1; i < 23; i++) if ((num * i) % 23 === 1) return true;
+                        return false;
+                    }},
+                    { description: "Sum equals Euler totient φ(30)", validate: (pwd) => (pwd.match(/\d+/g) || []).reduce((s, n) => s + parseInt(n), 0) === 8 },
+                    { description: "Sum is perfect number", validate: (pwd) => [6, 28, 496].includes((pwd.match(/\d+/g) || []).reduce((s, n) => s + parseInt(n), 0)) },
+                    { description: "No repeating digits", validate: (pwd) => new Set(pwd.match(/\d/g) || []).size === (pwd.match(/\d/g) || []).length },
+                    { description: "Forms geometric sequence", validate: (pwd) => {
+                        const nums = pwd.match(/\d+/g)?.map(Number) || [];
+                        return nums.length >= 3 && nums[1] / nums[0] === nums[2] / nums[1];
+                    }},
+                    { description: "Harmonic mean is integer", validate: (pwd) => {
+                        const nums = pwd.match(/\d+/g)?.map(Number) || [];
+                        return nums.length > 0 && Number.isInteger(nums.length / nums.reduce((s, n) => s + 1/n, 0));
+                    }},
+                    { description: "Includes quadratic residue mod 23", validate: (pwd) => [1, 2, 3, 4, 6, 8, 9, 12].some(q => pwd.includes(q.toString())) },
+                    { description: "Includes partition number", validate: (pwd) => [1, 2, 3, 5, 7, 11, 15].some(p => pwd.includes(p.toString())) },
+                    { description: "Includes Diophantine quintuple term", validate: (pwd) => pwd.includes("1") },
+                    { description: "Includes Stirling number", validate: (pwd) => [1, 2, 3, 7, 15].some(s => pwd.includes(s.toString())) },
+                    { description: "Includes Ramanujan tau", validate: (pwd) => [-24, 252, -1472].some(t => pwd.includes(t.toString())) },
+                    { description: "Möbius function value", validate: (pwd) => [-1, 0, 1].some(m => pwd.includes(m.toString())) },
+                    { description: "Includes Bernoulli number numerator", validate: (pwd) => [1, 6, 5, 30].some(b => pwd.includes(b.toString())) },
+                    { description: "Sum satisfies n³ + n + 41 is prime", validate: (pwd) => {
+                        const sum = (pwd.match(/\d+/g) || []).reduce((s, n) => s + parseInt(n), 0);
+                        const val = sum * sum * sum + sum + 41;
+                        for (let i = 2; i <= Math.sqrt(val); i++) if (val % i === 0) return false;
+                        return val > 1;
+                    }}
+                ],
+                code: "MATH_GENIX_2025",
+                riddle: "Solve x³ ≡ 7 (mod 23). Extract xth character from source."
+            },
+            geopolitical: {
+                title: "Geopolitical Time Machine",
+                rules: [
+                    { description: "Treaty ≥ 20 characters", validate: (pwd) => pwd.length >= 20 },
+                    { description: "Includes defunct country", validate: (pwd) => ["Aksum", "Danzig"].some(c => pwd.includes(c)) },
+                    { description: "Encodes disputed island latitude (e.g., 10)", validate: (pwd) => pwd.includes("10") || pwd.includes("11") },
+                    { description: "Words = UN members in 1920 (51)", validate: (pwd) => (pwd.split(/\s+/) || []).length === 51 },
+                    { description: "Includes treaty name", validate: (pwd) => ["Westphalia", "Tordesillas"].some(t => pwd.includes(t)) },
+                    { description: "No modern country names", validate: (pwd) => !["USA", "China", "Brazil"].some(c => pwd.includes(c)) },
+                    { description: "Length is triangular number", validate: (pwd) => [1, 3, 6, 10, 15, 21, 28].includes(pwd.length) },
+                    { description: "Includes historical currency", validate: (pwd) => ["Ducat", "Florin"].some(c => pwd.includes(c)) },
+                    { description: "No letters from 'peace'", validate: (pwd) => !/[peacePEACE]/.test(pwd) },
+                    { description: "Encodes border dispute year (e.g., 1938)", validate: (pwd) => pwd.includes("1938") },
+                    { description: "Includes ancient empire capital", validate: (pwd) => ["Babylon", "Carthage"].some(c => pwd.includes(c)) },
+                    { description: "Encodes geodetic distance between capitals", validate: (pwd) => pwd.includes("1000") },
+                    { description: "No vowels from UN language", validate: (pwd) => !/[aeiou]/.test(pwd) },
+                    { description: "Includes micronation", validate: (pwd) => ["Sealand", "Hutt River"].some(m => pwd.includes(m)) },
+                    { description: "Has palindrome substring", validate: (pwd) => {
+                        for (let i = 0; i < pwd.length - 2; i++) for (let j = 3; j <= pwd.length - i; j++) {
+                            const sub = pwd.slice(i, i + j);
+                            if (sub === sub.split('').reverse().join('')) return true;
+                        }
+                        return false;
+                    }},
+                    { description: "Near tectonic plate boundary", validate: (pwd) => ["Pacific", "Nazca"].some(p => pwd.includes(p)) },
+                    { description: "Consonants = perfect square", validate: (pwd) => {
+                        const cons = pwd.replace(/[aeiouAEIOU0-9\s]/g, '').length;
+                        return Number.isInteger(Math.sqrt(cons));
+                    }},
+                    { description: "Includes Roman numeral for 2025 (MMXXV)", validate: (pwd) => pwd.includes("MMXXV") },
+                    { description: "No digits from current day (16)", validate: (pwd) => !/[16]/.test(pwd) },
+                    { description: "Includes anagram of 'treaty'", validate: (pwd) => ["ytreat", "attyre"].some(a => pwd.includes(a)) },
+                    { description: "Includes historical figure", validate: (pwd) => ["Caesar", "Napoleon"].some(f => pwd.includes(f)) },
+                    { description: "Includes colonial territory", validate: (pwd) => ["New Amsterdam", "Ceylon"].some(t => pwd.includes(t)) },
+                    { description: "Includes UN resolution number", validate: (pwd) => ["242", "181"].some(r => pwd.includes(r)) },
+                    { description: "Includes valid ISO 3166 code", validate: (pwd) => ["US", "CN", "DE"].some(c => pwd.includes(c)) },
+                    { description: "Length satisfies n² - n + 61 is prime", validate: (pwd) => {
+                        const n = pwd.length;
+                        const val = n * n - n + 61;
+                        for (let i = 2; i <= Math.sqrt(val); i++) if (val % i === 0) return false;
+                        return val > 1;
+                    }}
+                ],
+                code: "GEO_SECRET_2025",
+                riddle: "Treaty of Utrecht year (1713). Extract 1713th character from source."
+            },
+            crypto: {
+                title: "Cryptographic Cipher Hunt",
+                rules: [
+                    { description: "Key ≥ 12 characters", validate: (pwd) => pwd.length >= 12 },
+                    { description: "Valid Vigenère key for 'xmz' to 'the'", validate: (pwd) => {
+                        const key = pwd.slice(0, 3).toLowerCase();
+                        const cipher = "xmz";
+                        const decrypted = cipher.split('').map((c, i) => String.fromCharCode((c.charCodeAt(0) - key.charCodeAt(i % key.length) + 26) % 26 + 97)).join('');
+                        return decrypted === "the";
+                    }},
+                    { description: "Simplified SHA-512 ends in 'abcd'", validate: (pwd) => {
+                        const hash = pwd.split('').reduce((s, c, i) => s + c.charCodeAt(0) * (i + 1), 0).toString(16);
+                        return hash.endsWith('abcd');
+                    }},
+                    { description: "Encodes RSA modulus (two primes)", validate: (pwd) => {
+                        const num = parseInt(pwd.match(/\d+/)?.[0] || "0");
+                        for (let p = 2; p < 100; p++) for (let q = 2; q < 100; q++) if (p * q === num) return true;
+                        return false;
+                    }},
+                    { description: "Caesar cipher (shift 5) is palindrome", validate: (pwd) => {
+                        const shifted = pwd.split('').map(c => String.fromCharCode((c.charCodeAt(0) - 97 + 5) % 26 + 97)).join('');
+                        return shifted === shifted.split('').reverse().join('');
+                    }},
+                    { description: "Base64 decodes to prime", validate: (pwd) => {
+                        try {
+                            const decoded = atob(pwd.slice(0, 4));
+                            const num = parseInt(decoded);
+                            for (let i = 2; i <= Math.sqrt(num); i++) if (num % i === 0) return false;
+                            return num > 1;
+                        } catch { return false; }
+                    }},
+                    { description: "Length is perfect number", validate: (pwd) => [6, 28, 496].includes(pwd.length) },
+                    { description: "No letters from 'key'", validate: (pwd) => !/[keyKEY]/.test(pwd) },
+                    { description: "Includes binary of current hour (15)", validate: (pwd) => pwd.includes((15).toString(2)) },
+                    { description: "Valid AES key length (16, 24, 32)", validate: (pwd) => [16, 24, 32].includes(pwd.length) },
+                    { description: "Hill cipher determinant nonzero", validate: (pwd) => {
+                        const num = parseInt(pwd.match(/\d+/)?.[0] || "0");
+                        return num % 2 !== 0 && num % 13 !== 0;
+                    }},
+                    { description: "Valid Playfair keyword", validate: (pwd) => /^[a-zA-Z]{5,25}$/.test(pwd) },
+                    { description: "Encodes Enigma rotor setting", validate: (pwd) => /[A-Z]{3}/.test(pwd) },
+                    { description: "Modular exponentiation result", validate: (pwd) => pwd.includes("2") },
+                    { description: "No consecutive primes", validate: (pwd) => !/2.*3|3.*5|5.*7/.test(pwd) },
+                    { description: "Huffman code prefix", validate: (pwd) => /^[01]{5,}/.test(pwd) },
+                    { description: "Hamming distance to 'code' = 4", validate: (pwd) => {
+                        const code = "code";
+                        return pwd.slice(0, 4).split('').reduce((s, c, i) => s + (c !== code[i] ? 1 : 0), 0) === 4;
+                    }},
+                    { description: "Polybius square mapping", validate: (pwd) => /\b[1-5]{2}\b/.test(pwd) },
+                    { description: "One-time pad length", validate: (pwd) => pwd.length >= 10 },
+                    { description: "Base32 encoding", validate: (pwd) => /^[A-Z2-7]{8}$/.test(pwd) },
+                    { description: "MD5 starts with 'ff'", validate: (pwd) => {
+                        const hash = pwd.split('').reduce((s, c, i) => s + c.charCodeAt(0) * (i + 1), 0).toString(16);
+                        return hash.startsWith('ff');
+                    }},
+                    { description: "Substitution cipher mapping", validate: (pwd) => pwd.length >= 26 },
+                    { description: "Elliptic curve point", validate: (pwd) => pwd.includes("1") },
+                    { description: "Frequency matches English", validate: (pwd) => pwd.includes("e") },
+                    { description: "Length satisfies n⁴ + n + 17 is prime", validate: (pwd) => {
+                        const n = pwd.length;
+                        const val = n * n * n * n + n + 17;
+                        for (let i = 2; i <= Math.sqrt(val); i++) if (val % i === 0) return false;
+                        return val > 1;
+                    }}
+                ],
+                code: "CRYPTO_SECRET_25",
+                riddle: "Decode Caesar cipher 'ifpsb' (shift 3). Use result to XOR source comment."
+            },
+            cosmic: {
+                title: "Cosmic Codebreaker",
+                rules: [
+                    { description: "Signal ≥ 15 characters", validate: (pwd) => pwd.length >= 15 },
+                    { description: "ASCII sum equals Schwarzschild radius (1000)", validate: (pwd) => pwd.split('').reduce((s, c) => s + c.charCodeAt(0), 0) === 1000 },
+                    { description: "Includes star within 10 parsecs", validate: (pwd) => ["ProximaCentauri", "Sirius"].some(s => pwd.includes(s)) },
+                    { description: "Encodes Moon phase (e.g., 0.5)", validate: (pwd) => pwd.includes("0.5") },
+                    { description: "Length is Lucas number", validate: (pwd) => [2, 3, 4, 7, 11, 18, 29].includes(pwd.length) },
+                    { description: "No letters from 'star'", validate: (pwd) => !/[starSTAR]/.test(pwd) },
+                    { description: "Includes IAU constellation (e.g., Ori)", validate: (pwd) => ["Ori", "Leo"].some(c => pwd.includes(c)) },
+                    { description: "Encodes Alpha Centauri distance (4.37)", validate: (pwd) => pwd.includes("4.37") },
+                    { description: "Digits = Fibonacci number", validate: (pwd) => [1, 2, 3, 5, 8, 13].includes((pwd.match(/\d/g) || []).length) },
+                    { description: "SETI signal sum is prime", validate: (pwd) => {
+                        const sum = (pwd.match(/\d+/g) || []).reduce((s, n) => s + parseInt(n), 0);
+                        for (let i = 2; i <= Math.sqrt(sum); i++) if (sum % i === 0) return false;
+                        return sum > 1;
+                    }},
+                    { description: "Includes pulsar period", validate: (pwd) => pwd.includes("1.3") },
+                    { description: "Encodes redshift value", validate: (pwd) => pwd.includes("0.01") },
+                    { description: "No vowels from 'galaxy'", validate: (pwd) => !/[ay]/.test(pwd) },
+                    { description: "Keplerian orbit parameter", validate: (pwd) => pwd.includes("0.7") },
+                    { description: "Anagram of 'comet'", validate: (pwd) => ["emoct", "otcem"].some(a => pwd.includes(a)) },
+                    { description: "Supernova type (Ia, II)", validate: (pwd) => ["Ia", "II"].some(t => pwd.includes(t)) },
+                    { description: "Exoplanet name", validate: (pwd) => ["Kepler452b"].some(e => pwd.includes(e)) },
+                    { description: "Hubble constant approximation (70)", validate: (pwd) => pwd.includes("70") },
+                    { description: "No digits from current minute (27)", validate: (pwd) => !/[27]/.test(pwd) },
+                    { description: "Binary star system", validate: (pwd) => ["Algol"].some(s => pwd.includes(s)) },
+                    { description: "Galactic coordinate", validate: (pwd) => pwd.includes("0.0") },
+                    { description: "Asteroid designation", validate: (pwd) => ["Ceres"].some(a => pwd.includes(a)) },
+                    { description: "CMB temperature (2.725)", validate: (pwd) => pwd.includes("2.725") },
+                    { description: "Valid IAU code", validate: (pwd) => ["Vul"].some(c => pwd.includes(c)) },
+                    { description: "Length satisfies n² + 2n + 43 is prime", validate: (pwd) => {
+                        const n = pwd.length;
+                        const val = n * n + 2 * n + 43;
+                        for (let i = 2; i <= Math.sqrt(val); i++) if (val % i === 0) return false;
+                        return val > 1;
+                    }}
+                ],
+                code: "COSMO_SECRET_2025",
+                riddle: "Distance to Proxima Centauri (4.24). Extract 424th character from source."
+            }
+        };
 
+        let currentGame = null;
         let currentRuleIndex = 0;
         let aiOverseerPenalty = 0;
         let failedAttempts = 0;
         const maxPenalty = 3;
         const maxFails = 5;
+        let collectedCodes = [];
 
-        function checkPassword() {
-            const password = document.getElementById("passwordInput").value;
+        function loadGame(gameId) {
+            currentGame = games[gameId];
+            currentRuleIndex = 0;
+            failedAttempts = 0;
+            aiOverseerPenalty = 0;
+            document.getElementById("launcher").classList.add("hidden");
+            document.getElementById("gameArea").classList.remove("hidden");
+            document.getElementById("gameTitle").textContent = currentGame.title;
+            document.getElementById("gameInput").value = "";
+            checkInput();
+        }
+
+        function checkInput() {
+            const password = document.getElementById("gameInput").value;
             const rulesList = document.getElementById("rulesList");
             const message = document.getElementById("message");
             const aiStatus = document.getElementById("aiStatus");
-            const input = document.getElementById("passwordInput");
+            const input = document.getElementById("gameInput");
             const progressBar = document.getElementById("progressBar");
 
-            // Update rules list
             rulesList.innerHTML = "";
-            for (let i = 0; i <= currentRuleIndex && i < rules.length; i++) {
-                const rule = rules[i];
+            for (let i = 0; i <= currentRuleIndex && i < currentGame.rules.length; i++) {
+                const rule = currentGame.rules[i];
                 const li = document.createElement("li");
                 li.textContent = rule.description;
                 li.className = rule.validate(password) ? 
@@ -126,19 +344,24 @@
                 rulesList.appendChild(li);
             }
 
-            // Check if current rule is satisfied
-            if (currentRuleIndex < rules.length && rules[currentRuleIndex].validate(password)) {
+            if (currentRuleIndex < currentGame.rules.length && currentGame.rules[currentRuleIndex].validate(password)) {
                 currentRuleIndex++;
                 aiOverseerPenalty = 0;
                 failedAttempts = 0;
-            } else if (currentRuleIndex < rules.length) {
+            } else if (currentRuleIndex < currentGame.rules.length) {
                 failedAttempts++;
                 if (failedAttempts >= maxFails) {
-                    message.textContent = "Too many failures! Solve this to unlock the secret: Find the smallest n such that n ≡ 3 (mod 7), n ≡ 5 (mod 11), n ≡ 2 (mod 13). Extract the nth character from each source code line.";
+                    message.textContent = `Too many failures! Solve: ${currentGame.riddle}`;
+                    if (!collectedCodes.includes(currentGame.code)) {
+                        collectedCodes.push(currentGame.code);
+                        if (collectedCodes.length === 5) {
+                            document.getElementById("metaPuzzle").classList.remove("hidden");
+                            document.getElementById("metaMessage").textContent = "Enter all codes concatenated, first 8 chars of SHA-256.";
+                        }
+                    }
                 }
             }
 
-            // AI Overseer logic
             aiOverseerPenalty += 0.1;
             if (aiOverseerPenalty >= maxPenalty) {
                 currentRuleIndex = Math.max(0, currentRuleIndex - 1);
@@ -148,31 +371,44 @@
                 aiStatus.textContent = `AI Overseer Warning: Penalty ${Math.round(aiOverseerPenalty * 10) / 10}/${maxPenalty}`;
             }
 
-            // Update progress bar
-            const progress = (currentRuleIndex / rules.length) * 100;
+            const progress = (currentRuleIndex / currentGame.rules.length) * 100;
             progressBar.style.width = `${progress}%`;
 
-            // Update input field style
-            const allRulesMet = rules.every(rule => rule.validate(password));
+            const allRulesMet = currentGame.rules.every(rule => rule.validate(password));
             input.className = allRulesMet ? 
                 "p-3 text-lg w-full max-w-lg border-2 border-green-500 rounded-lg focus:outline-none bg-gray-800 text-gray-100" : 
                 "p-3 text-lg w-full max-w-lg border-2 border-red-500 rounded-lg focus:outline-none bg-gray-800 text-gray-100";
 
-            // Win condition
-            if (allRulesMet && currentRuleIndex >= rules.length) {
-                message.textContent = "Impossible! You’ve conquered the unconquerable!";
+            if (allRulesMet && currentRuleIndex >= currentGame.rules.length) {
+                message.textContent = "Impossible! You’ve conquered the game!";
                 input.disabled = true;
                 input.className = "p-3 text-lg w-full max-w-lg border-2 border-green-500 rounded-lg bg-gray-200 text-gray-800";
+                if (!collectedCodes.includes(currentGame.code)) {
+                    collectedCodes.push(currentGame.code);
+                    if (collectedCodes.length === 5) {
+                        document.getElementById("metaPuzzle").classList.remove("hidden");
+                        document.getElementById("metaMessage").textContent = "Enter all codes concatenated, first 8 chars of SHA-256.";
+                    }
+                }
             } else if (failedAttempts < maxFails) {
-                message.textContent = currentRuleIndex < rules.length ? 
+                message.textContent = currentRuleIndex < currentGame.rules.length ? 
                     "Satisfy the current rule to proceed!" : 
-                    "Adjust your password to meet all rules.";
+                    "Adjust your input to meet all rules.";
             }
         }
 
-        // Timer for AI Overseer
-        setInterval(checkPassword, 5000);
-        checkPassword();
+        document.getElementById("metaInput")?.addEventListener("input", () => {
+            const input = document.getElementById("metaInput").value;
+            const expected = "XAI_SECRET_2025MATH_GENIX_2025GEO_SECRET_2025CRYPTO_SECRET_25COSMO_SECRET_2025";
+            const hash = input.split('').reduce((s, c, i) => s + c.charCodeAt(0) * (i + 1), 0).toString(16).slice(0, 8);
+            if (input === expected && hash === "ULTIMATE_25") {
+                document.getElementById("metaMessage").textContent = "Ultimate Victory! Code: ULTIMATE_25";
+            } else {
+                document.getElementById("metaMessage").textContent = "Incorrect meta-puzzle code.";
+            }
+        });
+
+        setInterval(() => currentGame && checkInput(), 5000);
     </script>
 </body>
 </html>
