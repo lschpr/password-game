@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Puzzle Game: Beyond Impossible</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Base64: WFhJX1NFQ1JFVF8yMDI1 -->
+</head>
+<body class="bg-gray-900 text-gray-100 flex flex-col items-center min-h-screen p-6">
+    <h1 class="text-4xl font-extrabold text-red-500 mb-6">Password Puzzle Game: Beyond Impossible</h1>
+    <input 
+        type="text" 
+        id="passwordInput" 
+        placeholder="Enter your password (abandon hope...)" 
+        class="p-3 text-lg w-full max-w-lg border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 bg-gray-800 text-gray-100 mb-6"
+        oninput="checkPassword()"
+    >
+    <div id="progress" class="w-full max-w-lg bg-gray-300 rounded-full h-4 mb-4">
+        <div id="progressBar" class="bg-red-500 h-4 rounded-full" style="width: 0%"></div>
+    </div>
+    <ul id="rulesList" class="w-full max-w-lg space-y-2"></ul>
+    <div id="message" class="mt-4 text-lg text-gray-700"></div>
+    <div id="aiStatus" class="mt-4 text-lg text-gray-700"></div>
+
+    <script>
+        const rules = [
+            { description: "Password must be at least 15 characters", validate: (pwd) => pwd.length >= 15 },
+            { description: "Sum of ASCII values must satisfy x² + y² = z²", validate: (pwd) => {
+                const sum = pwd.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+                for (let x = 1; x < sum; x++) {
+                    for (let y = 1; y < sum; y++) {
+                        if (x * x + y * y === sum) return true;
+                    }
+                }
+                return false;
+            }},
+            { description: "Include an uninhabited territory near the Mid-Atlantic Ridge", validate: (pwd) => ["South Georgia", "Bouvet Island", "Kerguelen Islands"].some(t => pwd.includes(t)) },
+            { description: "Simplified hash must start with '00ff'", validate: (pwd) => {
+                const hash = pwd.split('').reduce((s, c, i) => s + c.charCodeAt(0) * (i + 1), 0).toString(16);
+                return hash.startsWith('00ff');
+            }},
+            { description: "Include current Unix timestamp % 97 (e.g., 92)", validate: (pwd) => {
+                const mod = Math.floor(Date.now() / 1000) % 97;
+                return pwd.includes(mod.toString());
+            }},
+            { description: "No vowels, but include a 7+ letter English word", validate: (pwd) => !/[aeiouAEIOU]/.test(pwd) && ["strength", "syllable", "mythical"].some(w => pwd.includes(w)) },
+            { description: "Length must be a Fibonacci number", validate: (pwd) => [1, 2, 3, 5, 8, 13, 21, 34, 55].includes(pwd.length) },
+            { description: "Include a deep-sea creature emoji (🦑, 🦐)", validate: (pwd) => /[\u{1F990}-\u{1F99F}]/u.test(pwd) },
+            { description: "Unique characters = nth prime (n = length)", validate: (pwd) => {
+                const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
+                return new Set(pwd).size === (primes[pwd.length - 1] || 0);
+            }},
+            { description: "Form a regex matching 'hello'", validate: (pwd) => {
+                try { return new RegExp(pwd).test("hello"); } catch { return false; }
+            }},
+            { description: "Include a Sophie Germain prime", validate: (pwd) => {
+                const primes = [2, 3, 5, 11, 23, 29, 41, 53, 83, 89];
+                return primes.some(p => pwd.includes(p.toString()));
+            }},
+            { description: "Include the name of a disputed territory pre-1945", validate: (pwd) => ["Danzig", "Sudetenland"].some(t => pwd.includes(t)) },
+            { description: "ASCII sum must be divisible by the chromatic number of a Petersen graph (3)", validate: (pwd) => {
+                const sum = pwd.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
+                return sum % 3 === 0;
+            }},
+            { description: "Include a valid ISBN-10 number", validate: (pwd) => {
+                const isbn = pwd.match(/\d{10}/);
+                if (!isbn) return false;
+                const digits = isbn[0].split('').map(Number);
+                return digits.reduce((s, d, i) => s + d * (10 - i), 0) % 11 === 0;
+            }},
+            { description: "No two consecutive characters can be identical", validate: (pwd) => !/(.)\1/.test(pwd) },
+            { description: "Include the name of a tectonic plate", validate: (pwd) => ["Pacific", "Nazca", "Eurasian"].some(p => pwd.includes(p)) },
+            { description: "Number of consonants must equal a perfect number", validate: (pwd) => {
+                const consonants = pwd.replace(/[aeiouAEIOU0-9\s]/g, '').length;
+                return [6, 28, 496, 8128].includes(consonants);
+            }},
+            { description: "Include a valid IPv4 address", validate: (pwd) => /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/.test(pwd) },
+            { description: "Password must be a palindrome", validate: (pwd) => pwd === pwd.split('').reverse().join('') },
+            { description: "Include a valid chemical element symbol", validate: (pwd) => ["H", "He", "Li", "Be", "Ne"].some(e => pwd.includes(e)) },
+            { description: "Sum of digits must form a perfect square", validate: (pwd) => {
+                const digits = pwd.match(/\d/g);
+                if (!digits) return false;
+                const sum = digits.reduce((s, d) => s + parseInt(d), 0);
+                return Number.isInteger(Math.sqrt(sum));
+            }},
+            { description: "Include a word that is an anagram of 'listen'", validate: (pwd) => ["silent", "inlets"].some(w => pwd.includes(w)) },
+            { description: "Password must encode the day of the week as a number (1=Mon, 7=Sun)", validate: (pwd) => {
+                const day = new Date().getDay() || 7;
+                return pwd.includes(day.toString());
+            }},
+            { description: "Include a valid chess move in algebraic notation", validate: (pwd) => /\b[a-h][1-8][a-h][1-8]\b/.test(pwd) },
+            { description: "Total number of characters must satisfy n² + n + 41 is prime", validate: (pwd) => {
+                const n = pwd.length;
+                const val = n * n + n + 41;
+                for (let i = 2; i <= Math.sqrt(val); i++) {
+                    if (val % i === 0) return false;
+                }
+                return val > 1;
+            }}
+        ];
+
+        let currentRuleIndex = 0;
+        let aiOverseerPenalty = 0;
+        let failedAttempts = 0;
+        const maxPenalty = 3;
+        const maxFails = 5;
+
+        function checkPassword() {
+            const password = document.getElementById("passwordInput").value;
+            const rulesList = document.getElementById("rulesList");
+            const message = document.getElementById("message");
+            const aiStatus = document.getElementById("aiStatus");
+            const input = document.getElementById("passwordInput");
+            const progressBar = document.getElementById("progressBar");
+
+            // Update rules list
+            rulesList.innerHTML = "";
+            for (let i = 0; i <= currentRuleIndex && i < rules.length; i++) {
+                const rule = rules[i];
+                const li = document.createElement("li");
+                li.textContent = rule.description;
+                li.className = rule.validate(password) ? 
+                    "text-green-500 font-bold p-2 bg-gray-800 rounded-lg shadow" : 
+                    "text-red-500 p-2 bg-gray-800 rounded-lg shadow";
+                rulesList.appendChild(li);
+            }
+
+            // Check if current rule is satisfied
+            if (currentRuleIndex < rules.length && rules[currentRuleIndex].validate(password)) {
+                currentRuleIndex++;
+                aiOverseerPenalty = 0;
+                failedAttempts = 0;
+            } else if (currentRuleIndex < rules.length) {
+                failedAttempts++;
+                if (failedAttempts >= maxFails) {
+                    message.textContent = "Too many failures! Solve this to unlock the secret: Find the smallest n such that n ≡ 3 (mod 7), n ≡ 5 (mod 11), n ≡ 2 (mod 13). Extract the nth character from each source code line.";
+                }
+            }
+
+            // AI Overseer logic
+            aiOverseerPenalty += 0.1;
+            if (aiOverseerPenalty >= maxPenalty) {
+                currentRuleIndex = Math.max(0, currentRuleIndex - 1);
+                aiStatus.textContent = "AI Overseer: Too slow! Progress reset by one rule!";
+                aiOverseerPenalty = 0;
+            } else {
+                aiStatus.textContent = `AI Overseer Warning: Penalty ${Math.round(aiOverseerPenalty * 10) / 10}/${maxPenalty}`;
+            }
+
+            // Update progress bar
+            const progress = (currentRuleIndex / rules.length) * 100;
+            progressBar.style.width = `${progress}%`;
+
+            // Update input field style
+            const allRulesMet = rules.every(rule => rule.validate(password));
+            input.className = allRulesMet ? 
+                "p-3 text-lg w-full max-w-lg border-2 border-green-500 rounded-lg focus:outline-none bg-gray-800 text-gray-100" : 
+                "p-3 text-lg w-full max-w-lg border-2 border-red-500 rounded-lg focus:outline-none bg-gray-800 text-gray-100";
+
+            // Win condition
+            if (allRulesMet && currentRuleIndex >= rules.length) {
+                message.textContent = "Impossible! You’ve conquered the unconquerable!";
+                input.disabled = true;
+                input.className = "p-3 text-lg w-full max-w-lg border-2 border-green-500 rounded-lg bg-gray-200 text-gray-800";
+            } else if (failedAttempts < maxFails) {
+                message.textContent = currentRuleIndex < rules.length ? 
+                    "Satisfy the current rule to proceed!" : 
+                    "Adjust your password to meet all rules.";
+            }
+        }
+
+        // Timer for AI Overseer
+        setInterval(checkPassword, 5000);
+        checkPassword();
+    </script>
+</body>
+</html>
